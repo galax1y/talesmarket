@@ -42,7 +42,7 @@ async function main() {
       ['machado gigante', 800],
       ['egide da nobreza', 800],
       ['sobretudo do maestro', 2000],
-      ['lança gigante', 800],
+      ['lanca gigante', 800],
       ['pilares', 400],
       ['martelo veterano', 400],
       ['arco demoniaco', 400],
@@ -54,7 +54,9 @@ async function main() {
       ['balista ilusional', 2000],
       ['bandagens limpas ilusionais', 2000],
       ['luva de combo ilusional', 2000],
-      ['tabula ilusional', 2000]
+      ['tabula ilusional', 2000],
+      ['botas veteranas', 1500],
+      ['botas da aberracao', 1000]
       // ['escudo de bradium', 400],
       // ['capa heroica', 3000],
     ])
@@ -88,6 +90,7 @@ async function main() {
 
       const processed: ProcessedItem = {
         name: itemName,
+        price: (minZenyPerCoin ?? 0) * coins * TEN_PERCENT,
         coins,
         zenyPerCoin: minZenyPerCoin ?? 0,
         offers: []

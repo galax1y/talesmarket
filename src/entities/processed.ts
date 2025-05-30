@@ -8,6 +8,7 @@ interface MarketOffer {
 export interface ProcessedItem {
   name: string
   coins: number
+  price: number
   zenyPerCoin: number
   offers: MarketOffer[]
 }
