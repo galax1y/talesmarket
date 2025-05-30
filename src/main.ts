@@ -5,6 +5,7 @@ import puppeteer from 'puppeteer'
 
 import { Item } from './entities/item'
 import { zenyFormatter } from './helpers/zeny-formatter'
+import { ProcessedItem } from './entities/processed'
 
 const MAX_ITEMS_PER_PAGE = 30
 const BASE_URL = new URL('https://ragnatales.com.br/market')
@@ -38,18 +39,27 @@ async function main() {
 
     const itemsToQuery: Map<string, number> = new Map([
       ['escudo gigante', 800],
+      ['machado gigante', 800],
       ['egide da nobreza', 800],
       ['sobretudo do maestro', 2000],
       ['lança gigante', 800],
+      ['pilares', 400],
       ['martelo veterano', 400],
-      ['escudo de bradium', 400],
+      ['arco demoniaco', 400],
+      ['gladio da nobreza', 800],
       ['manteau de chamas de naght sieger', 400],
-      ['capa heroica', 3000],
       ['capa do carrasco', 1600],
-      ['vestes de ghostring', 2000]
+      ['vestes de ghostring', 2000],
+      ['tae goo lyeon ilusional', 2000],
+      ['balista ilusional', 2000],
+      ['bandagens limpas ilusionais', 2000],
+      ['luva de combo ilusional', 2000],
+      ['tabula ilusional', 2000]
+      // ['escudo de bradium', 400],
+      // ['capa heroica', 3000],
     ])
 
-    const result: string[] = []
+    const result: ProcessedItem[] = []
 
     for (const [itemName, coins] of itemsToQuery) {
       const itemUrl = new URL(
@@ -76,12 +86,17 @@ async function main() {
               return Math.min(min, zenyPerCoin)
             }, Number.MAX_VALUE)
 
-      result.push(
-        `Minimum zeny per coin for: '${itemName}': ${zenyFormatter.format(
-          minZenyPerCoin ?? 0
-        )}`
-      )
+      const processed: ProcessedItem = {
+        name: itemName,
+        coins,
+        zenyPerCoin: minZenyPerCoin ?? 0,
+        offers: []
+      }
+
+      result.push(processed)
     }
+
+    result.sort((a, b) => a.zenyPerCoin - b.zenyPerCoin)
 
     await browser.close()
 
@@ -90,7 +105,7 @@ async function main() {
 
     const filePath = `./src/results/${isoSafe}_results.txt`
 
-    fs.writeFile(filePath, result.join('\n'), (err) => {
+    fs.writeFile(filePath, JSON.stringify(result, null, 2), (err) => {
       if (err) {
         console.log('Error writing file:', err)
       }
