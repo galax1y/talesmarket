@@ -10,5 +10,5 @@ export interface ProcessedItem {
   coins: number
   price: number
   zenyPerCoin: number
-  offers: MarketOffer[]
+  offer: MarketOffer
 }

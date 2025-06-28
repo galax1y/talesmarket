@@ -3,15 +3,15 @@ import * as path from 'node:path'
 
 import puppeteer from 'puppeteer'
 
-import { Item } from './entities/item'
-import { zenyFormatter } from './helpers/zeny-formatter'
-import { ProcessedItem } from './entities/processed'
+import { Item } from '../entities/item'
+import { zenyFormatter } from '../helpers/zeny-formatter'
+import { ProcessedItem } from '../entities/processed'
 
 const MAX_ITEMS_PER_PAGE = 30
 const BASE_URL = new URL('https://ragnatales.com.br/market')
 const TEN_PERCENT = 0.1
 
-async function main() {
+async function scrape() {
   try {
     const browser = await puppeteer.launch({
       headless: false
@@ -213,14 +213,12 @@ async function main() {
           price: item.price,
           coins,
           zenyPerCoin: item.price / (coins * TEN_PERCENT),
-          offers: [
-            {
-              map_x: item.map_x,
-              map_y: item.map_y,
-              price: item.price,
-              quantity: item.amount
-            }
-          ]
+          offer: {
+            map_x: item.map_x,
+            map_y: item.map_y,
+            price: item.price,
+            quantity: item.amount
+          }
         })
       )
     }
@@ -232,7 +230,7 @@ async function main() {
     const now = new Date()
     const isoSafe = now.toISOString().replace(/[:.]/g, '-')
 
-    const filePath = `./src/results/${isoSafe}_results.txt`
+    const filePath = `./src/results/${isoSafe}_results.json`
 
     fs.writeFile(filePath, JSON.stringify(result, null, 2), (err) => {
       if (err) {
@@ -248,4 +246,4 @@ function convertToBase64(raw: string): string {
   return Buffer.from(raw).toString('base64')
 }
 
-main()
+scrape()
