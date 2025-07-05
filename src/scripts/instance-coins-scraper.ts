@@ -1,11 +1,11 @@
 import * as fs from 'node:fs'
-import * as path from 'node:path'
 
 import puppeteer from 'puppeteer'
 
 import { Item } from '../entities/item'
-import { zenyFormatter } from '../helpers/zeny-formatter'
 import { ProcessedItem } from '../entities/processed'
+
+import { exportToFile } from '../helpers/export-to-file'
 
 const MAX_ITEMS_PER_PAGE = 30
 const BASE_URL = new URL('https://ragnatales.com.br/market')
@@ -227,16 +227,7 @@ async function scrape() {
 
     await browser.close()
 
-    const now = new Date()
-    const isoSafe = now.toISOString().replace(/[:.]/g, '-')
-
-    const filePath = `./src/results/${isoSafe}_results.json`
-
-    fs.writeFile(filePath, JSON.stringify(result, null, 2), (err) => {
-      if (err) {
-        console.log('Error writing file:', err)
-      }
-    })
+    exportToFile(result)
   } catch (error) {
     console.log(error)
   }

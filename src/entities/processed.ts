@@ -12,3 +12,12 @@ export interface ProcessedItem {
   zenyPerCoin: number
   offer: MarketOffer
 }
+
+export interface DumbSellItem {
+  name: string
+  price: number
+  amount: number
+  npcSellPrice: number
+  totalProfit: number
+  offer: MarketOffer
+}

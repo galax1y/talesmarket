@@ -4,7 +4,8 @@
   "description": "",
   "main": "src/main.ts",
   "scripts": {
-    "scrape": "tsx src/scripts/scrape.ts",
+    "dummy": "tsx src/scripts/dummy-scraper.ts",
+    "coins": "tsx src/scripts/instance-coins-scraper.ts",
     "web": "vite serve"
   },
   "keywords": [],
