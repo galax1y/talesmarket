@@ -6,6 +6,7 @@ import { Item } from '../entities/item'
 import { ProcessedItem } from '../entities/processed'
 
 import { exportToFile } from '../helpers/export-to-file'
+import { renameFile } from '../helpers/rename-file'
 
 const MAX_ITEMS_PER_PAGE = 30
 const BASE_URL = new URL('https://ragnatales.com.br/market')
@@ -227,7 +228,10 @@ async function scrape() {
 
     await browser.close()
 
-    exportToFile(result)
+    const filename = 'instance_coins'
+
+    renameFile(filename)
+    exportToFile(result, filename)
   } catch (error) {
     console.log(error)
   }

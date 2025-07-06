@@ -5,6 +5,7 @@ import puppeteer from 'puppeteer'
 import { Item } from '../entities/item'
 import { DumbSellItem, ProcessedItem } from '../entities/processed'
 import { exportToFile } from '../helpers/export-to-file'
+import { renameFile } from '../helpers/rename-file'
 
 const MAX_ITEMS_PER_PAGE = 30
 const BASE_URL = new URL('https://ragnatales.com.br/market')
@@ -109,7 +110,10 @@ async function scrapeCategory({ categoryName }: CategoryProps) {
       })
       .sort((a, b) => b.totalProfit - a.totalProfit)
 
-    exportToFile(dumbSells, 'dumbsells')
+    const filename = `dumbsell_${categoryName}`
+
+    renameFile(filename)
+    exportToFile(dumbSells, filename)
   } catch (error) {
     console.error('Error during scraping:', error)
   }
