@@ -14,6 +14,7 @@
   "packageManager": "pnpm@8.15.5+sha256.4b4efa12490e5055d59b9b9fc9438b7d581a6b7af3b5675eb5c5f447cee1a589",
   "dependencies": {
     "@tailwindcss/vite": "^4.1.11",
+    "@tanstack/react-router": "^1.125.3",
     "@vitejs/plugin-react": "^4.6.0",
     "axios": "^1.9.0",
     "puppeteer": "^24.9.0",
@@ -22,6 +23,7 @@
     "tailwindcss": "^4.1.11"
   },
   "devDependencies": {
+    "@tanstack/router-plugin": "^1.125.3",
     "@types/react": "^19.1.8",
     "@types/react-dom": "^19.1.6",
     "tsx": "^4.19.4",
