@@ -1,17 +1,16 @@
-import * as fs from 'node:fs'
-
 import puppeteer from 'puppeteer'
 
 import { Item } from '../entities/item'
-import { DumbSellItem, ProcessedItem } from '../entities/processed'
-import { exportToFile } from '../helpers/export-to-file'
+import { DumbSellItem } from '../entities/processed'
+
 import { renameFile } from '../helpers/rename-file'
+import { exportToFile } from '../helpers/export-to-file'
 
 const MAX_ITEMS_PER_PAGE = 30
 const BASE_URL = new URL('https://ragnatales.com.br/market')
 const MERCHANT_BUFF_PERCENTAGE = 1.24
 
-async function scrape() {
+export default async function scrape() {
   await Promise.all([
     scrapeCategory({ categoryName: 'usable' }),
     scrapeCategory({ categoryName: 'etc' })

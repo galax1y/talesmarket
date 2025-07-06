@@ -1,18 +1,17 @@
-import * as fs from 'node:fs'
-
 import puppeteer from 'puppeteer'
 
 import { Item } from '../entities/item'
 import { ProcessedItem } from '../entities/processed'
 
-import { exportToFile } from '../helpers/export-to-file'
 import { renameFile } from '../helpers/rename-file'
+import { exportToFile } from '../helpers/export-to-file'
+import { stringToBase64 } from '../helpers/string-to-base64'
 
 const MAX_ITEMS_PER_PAGE = 30
 const BASE_URL = new URL('https://ragnatales.com.br/market')
 const TEN_PERCENT = 0.1
 
-async function scrape() {
+export default async function scrape() {
   try {
     const browser = await puppeteer.launch({
       headless: false
@@ -193,7 +192,7 @@ async function scrape() {
 
     for (const [itemName, coins] of itemsToQuery) {
       const itemUrl = new URL(
-        `/market?query=${convertToBase64(itemName)}`,
+        `/market?query=${stringToBase64(itemName)}`,
         BASE_URL
       )
       await page.goto(itemUrl.toString())
@@ -235,10 +234,6 @@ async function scrape() {
   } catch (error) {
     console.log(error)
   }
-}
-
-function convertToBase64(raw: string): string {
-  return Buffer.from(raw).toString('base64')
 }
 
 scrape()

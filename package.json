@@ -4,6 +4,7 @@
   "description": "",
   "main": "src/main.ts",
   "scripts": {
+    "buymarket": "tsx src/scripts/buymarket-scraper.ts",
     "dummy": "tsx src/scripts/dummy-scraper.ts",
     "coins": "tsx src/scripts/instance-coins-scraper.ts",
     "web": "vite serve"
