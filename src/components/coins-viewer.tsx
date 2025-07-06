@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { ProcessedItem } from './entities/processed'
-import { ItemCard } from './components/item-card'
+import { ProcessedItem } from '../entities/processed'
+import { ItemCard } from './item-card'
 
 function groupItemsByZenyPerCoin(items: ProcessedItem[]) {
   return {
@@ -14,7 +14,7 @@ function groupItemsByZenyPerCoin(items: ProcessedItem[]) {
   }
 }
 
-export function App() {
+export function CoinsViewer() {
   const [results, setResults] = useState<ProcessedItem[]>([])
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({})
 
@@ -40,43 +40,47 @@ export function App() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-900 text-slate-100 py-8 px-4">
+    <div className="bg-slate-900 text-slate-100 py-8 px-4">
       <main className="max-w-3xl mx-auto">
-        <div className="mb-6 flex items-center justify-between">
+        <div className="mb-6 flex flex-col gap-2 items-center justify-between">
           <h1 className="text-lg font-semibold text-slate-100">
-            Upload JSON Results
+            Upload instance coins result file
           </h1>
           <input
             type="file"
             accept=".json"
             onChange={(e) => handleFiles(e.target.files)}
-            className="text-sm file:bg-blue-600 file:text-white file:px-3 file:py-1.5 file:rounded-md file:border-0 file:cursor-pointer bg-slate-800 text-slate-300 rounded-md"
+            className="p-2 text-sm file:bg-blue-600 file:text-white file:px-3 file:py-1.5 file:rounded-md file:border-0 file:cursor-pointer bg-slate-800 text-slate-300 rounded-md"
           />
         </div>
 
-        {Object.entries(grouped).map(([range, items]) =>
-          items.length ? (
+        {Object.entries(grouped).map(([priceRange, items]) => {
+          if (!items.length) return null
+
+          const isOpen = openGroups[priceRange]
+
+          return (
             <div
-              key={range}
+              key={priceRange}
               className="mb-4 border border-slate-700 rounded-lg"
             >
               <button
                 className="w-full text-left px-4 py-2 bg-slate-800 hover:bg-slate-700 font-semibold rounded-t-lg"
-                onClick={() => toggleGroup(range)}
+                onClick={() => toggleGroup(priceRange)}
               >
-                {range} Zeny ({items.length} items)
+                {priceRange} Zeny ({items.length} items)
               </button>
 
-              {openGroups[range] && (
+              {isOpen && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 p-2 bg-slate-800 rounded-b-lg">
-                  {items.map((item, i) => (
-                    <ItemCard key={i} item={item} />
+                  {items.map((item, index) => (
+                    <ItemCard key={index} item={item} />
                   ))}
                 </div>
               )}
             </div>
-          ) : null
-        )}
+          )
+        })}
       </main>
     </div>
   )

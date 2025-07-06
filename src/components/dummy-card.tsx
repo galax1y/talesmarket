@@ -1,11 +1,11 @@
 import { useState } from 'react'
-import { ProcessedItem } from '../entities/processed'
+import { DumbSellItem } from '../entities/processed'
 
-interface ItemCardProps {
-  item: ProcessedItem
+interface DumbSellItemCardProps {
+  item: DumbSellItem
 }
 
-export function ItemCard({ item }: ItemCardProps) {
+export function DumbSellItemCard({ item }: DumbSellItemCardProps) {
   const [copied, setCopied] = useState(false)
   const [hidden, setHidden] = useState(false)
 
@@ -24,18 +24,25 @@ export function ItemCard({ item }: ItemCardProps) {
       <div className="font-bold text-slate-800 capitalize">{item.name}</div>
 
       <div className="flex justify-between text-slate-600">
-        <span>Zeny:</span>
+        <span>Price:</span>
         <span>{item.price.toLocaleString()}</span>
       </div>
 
       <div className="flex justify-between text-slate-600">
-        <span>Coins:</span>
-        <span>{item.coins}</span>
+        <span>Amount:</span>
+        <span>{item.amount}</span>
       </div>
 
       <div className="flex justify-between text-slate-600">
-        <span>Z/C:</span>
-        <span>{item.zenyPerCoin}</span>
+        <span>NPC Value:</span>
+        <span>{item.npcSellPrice.toString()}</span>
+      </div>
+
+      <div className="flex justify-between text-slate-600">
+        <span>Total Profit:</span>
+        <span className="text-green-700 font-medium">
+          {item.totalProfit.toLocaleString()}
+        </span>
       </div>
 
       <div className="flex justify-between items-center mt-2">
