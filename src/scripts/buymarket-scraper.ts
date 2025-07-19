@@ -23,12 +23,25 @@ export default async function scrape() {
 
     const items = await scrapeItems(browser, highestUniqueOffers)
 
-    items.sort((a, b) => a.price - b.price)
-
     const processed: ProcessedBuyOffer[] = items.map((offer) => {
       const marketOffer = highestUniqueOffers.find(
         (uniqueOffer) => uniqueOffer.item.name === offer.name
-      )!
+      )
+
+      if (!marketOffer) {
+        return {
+          itemName: offer.name,
+          price: offer.price,
+          amount: offer.amount,
+          totalProfit: 0,
+          offer: {
+            map_x: 0,
+            map_y: 0,
+            price: 0,
+            quantity: 0
+          }
+        }
+      }
 
       return {
         itemName: offer.name,
@@ -36,13 +49,15 @@ export default async function scrape() {
         amount: offer.amount,
         totalProfit: (marketOffer.price - offer.price) * offer.amount,
         offer: {
-          map_x: marketOffer.store.map_x,
-          map_y: marketOffer.store.map_y,
+          map_x: offer.map_x,
+          map_y: offer.map_y,
           price: marketOffer.price,
           quantity: marketOffer.amount_remain
         }
       }
     })
+
+    processed.sort((a, b) => b.totalProfit - a.totalProfit)
 
     renameFile('buymarket')
     exportToFile(processed, 'buymarket')
@@ -59,7 +74,7 @@ function getHighestItemPriceOffers(offers: BuyOffer[]): BuyOffer[] {
     const name = offer.item.name
     const existing = grouped.get(name)
 
-    if (!existing || offer.item.price > existing.item.price) {
+    if (!existing || offer.price > existing.price) {
       grouped.set(name, offer)
     }
   }

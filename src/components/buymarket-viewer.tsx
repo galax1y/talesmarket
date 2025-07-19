@@ -1,21 +1,22 @@
 import { useState } from 'react'
-import { ProcessedItem } from '../entities/processed'
+import { ProcessedBuyOffer } from '../entities/buy-offer'
+import { useBuymarketData } from '../hooks/use-buymarket-data'
 import { ItemCard } from './item-card'
-import { useCoinsData } from '../hooks/use-coins-data'
 
-function groupItemsByZenyPerCoin(items: ProcessedItem[]) {
+function groupItemsByProfit(items: ProcessedBuyOffer[]) {
   return {
-    '2000–2499 Z/C': items.filter(
-      (item) => item.zenyPerCoin >= 2000 && item.zenyPerCoin < 2500
+    'High Profit (10k+)': items.filter((item) => item.totalProfit >= 10000),
+    'Medium Profit (5k-10k)': items.filter(
+      (item) => item.totalProfit >= 5000 && item.totalProfit < 10000
     ),
-    '2500–2999 Z/C': items.filter(
-      (item) => item.zenyPerCoin >= 2500 && item.zenyPerCoin < 3000
+    'Low Profit (1k-5k)': items.filter(
+      (item) => item.totalProfit >= 1000 && item.totalProfit < 5000
     ),
-    '3000+ Z/C': items.filter((item) => item.zenyPerCoin >= 3000)
+    'Minimal Profit (<1k)': items.filter((item) => item.totalProfit < 1000)
   }
 }
 
-export function CoinsViewer() {
+export function BuymarketViewer() {
   const {
     data,
     isLoading,
@@ -25,7 +26,7 @@ export function CoinsViewer() {
     setLoading,
     setErrorMessage,
     clearData
-  } = useCoinsData()
+  } = useBuymarketData()
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({})
 
   const handleFiles = async (files: FileList | null) => {
@@ -35,7 +36,7 @@ export function CoinsViewer() {
       setLoading(true)
       setErrorMessage(null)
       const fileContent = await files[0].text()
-      const json = JSON.parse(fileContent) as ProcessedItem[]
+      const json = JSON.parse(fileContent) as ProcessedBuyOffer[]
       updateData(json)
     } catch (err) {
       console.error(`Invalid JSON in file: ${files[0].name}`, err)
@@ -45,7 +46,7 @@ export function CoinsViewer() {
     }
   }
 
-  const grouped = groupItemsByZenyPerCoin(data.slice(0, 100))
+  const grouped = groupItemsByProfit(data.slice(0, 100))
 
   const toggleGroup = (groupName: string) => {
     setOpenGroups((prev) => ({
@@ -64,7 +65,7 @@ export function CoinsViewer() {
       <main className="max-w-3xl mx-auto">
         <div className="mb-6 flex flex-col gap-2 items-center justify-between">
           <h1 className="text-lg font-semibold text-slate-100">
-            Instance Coins Data Viewer
+            Buymarket Data Viewer
           </h1>
           <div className="flex gap-2 items-center">
             <input
@@ -102,27 +103,41 @@ export function CoinsViewer() {
           </div>
         )}
 
-        {Object.entries(grouped).map(([priceRange, items]) => {
+        {Object.entries(grouped).map(([profitRange, items]) => {
           if (!items.length) return null
 
-          const isOpen = openGroups[priceRange]
+          const isOpen = openGroups[profitRange]
 
           return (
             <div
-              key={priceRange}
+              key={profitRange}
               className="mb-4 border border-slate-700 rounded-lg"
             >
               <button
                 className="w-full text-left px-4 py-2 bg-slate-800 hover:bg-slate-700 font-semibold rounded-t-lg"
-                onClick={() => toggleGroup(priceRange)}
+                onClick={() => toggleGroup(profitRange)}
               >
-                {priceRange} Zeny ({items.length} items)
+                {profitRange} ({items.length} items)
               </button>
 
               {isOpen && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 p-2 bg-slate-800 rounded-b-lg">
                   {items.map((item, index) => (
-                    <ItemCard key={index} item={item} />
+                    <div key={index} className="bg-slate-700 p-3 rounded-md">
+                      <div className="font-semibold text-slate-200">
+                        {item.itemName}
+                      </div>
+                      <div className="text-sm text-slate-300">
+                        <div>Price: {item.price.toLocaleString()} Z</div>
+                        <div>Amount: {item.amount}</div>
+                        <div className="text-green-400">
+                          Profit: {item.totalProfit.toLocaleString()} Z
+                        </div>
+                        <div className="text-blue-400">
+                          Location: ({item.offer.map_x}, {item.offer.map_y})
+                        </div>
+                      </div>
+                    </div>
                   ))}
                 </div>
               )}
@@ -132,7 +147,7 @@ export function CoinsViewer() {
 
         {data.length === 0 && !isLoading && !error && (
           <div className="text-center py-8 text-slate-400">
-            No data loaded. Please upload an instance coins JSON file.
+            No data loaded. Please upload a buymarket JSON file.
           </div>
         )}
       </main>
