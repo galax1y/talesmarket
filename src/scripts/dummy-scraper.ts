@@ -61,7 +61,7 @@ async function scrapeCategory({ categoryName }: CategoryProps) {
     const result: Item[] = []
 
     for (let i = 1; i <= totalPages; i++) {
-      const filters = { query: '', etc: true }
+      const filters = { query: '', [categoryName]: true }
       const encodedFilters = encodeURIComponent(JSON.stringify(filters))
 
       // Working!
