@@ -13,7 +13,8 @@ export interface ProcessedBuyOffer {
   amount: number
   totalProfit: number
   price: number
-  offer: MarketOffer
+  buyLocation: MarketOffer
+  sellLocation: MarketOffer
 }
 
 interface MarketOffer {

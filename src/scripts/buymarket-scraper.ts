@@ -34,7 +34,13 @@ export default async function scrape() {
           price: offer.price,
           amount: offer.amount,
           totalProfit: 0,
-          offer: {
+          buyLocation: {
+            map_x: 0,
+            map_y: 0,
+            price: 0,
+            quantity: 0
+          },
+          sellLocation: {
             map_x: 0,
             map_y: 0,
             price: 0,
@@ -48,9 +54,15 @@ export default async function scrape() {
         price: offer.price,
         amount: offer.amount,
         totalProfit: (marketOffer.price - offer.price) * offer.amount,
-        offer: {
+        buyLocation: {
           map_x: offer.map_x,
           map_y: offer.map_y,
+          price: offer.price,
+          quantity: offer.amount
+        },
+        sellLocation: {
+          map_x: marketOffer.store.map_x,
+          map_y: marketOffer.store.map_y,
           price: marketOffer.price,
           quantity: marketOffer.amount_remain
         }

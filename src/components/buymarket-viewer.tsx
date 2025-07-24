@@ -1,10 +1,10 @@
 import { useState } from 'react'
 import { ProcessedBuyOffer } from '../entities/buy-offer'
 import { useBuymarketData } from '../hooks/use-buymarket-data'
-import { ItemCard } from './item-card'
 
 function groupItemsByProfit(items: ProcessedBuyOffer[]) {
   return {
+    'Ultra Profit (100k+)': items.filter((item) => item.totalProfit >= 100000),
     'High Profit (10k+)': items.filter((item) => item.totalProfit >= 10000),
     'Medium Profit (5k-10k)': items.filter(
       (item) => item.totalProfit >= 5000 && item.totalProfit < 10000
@@ -58,6 +58,22 @@ export function BuymarketViewer() {
   const formatLastUpdate = (date: Date | null) => {
     if (!date) return 'Never'
     return date.toLocaleString()
+  }
+
+  const [copied, setCopied] = useState(false)
+  const [copiedBuy, setCopiedBuy] = useState<number | null>(null)
+  const [copiedSell, setCopiedSell] = useState<number | null>(null)
+
+  const handleCopy = (
+    type: 'market' | 'buymarket',
+    coords: { x: number; y: number },
+    setCopiedFn: React.Dispatch<React.SetStateAction<number | null>>,
+    idx: number
+  ) => {
+    const prefix = type === 'market' ? '@market' : '@buymarket'
+    navigator.clipboard.writeText(`${prefix} ${coords.x}/${coords.y}`)
+    setCopiedFn(idx)
+    setTimeout(() => setCopiedFn(null), 1500)
   }
 
   return (
@@ -133,9 +149,38 @@ export function BuymarketViewer() {
                         <div className="text-green-400">
                           Profit: {item.totalProfit.toLocaleString()} Z
                         </div>
-                        <div className="text-blue-400">
-                          Location: ({item.offer.map_x}, {item.offer.map_y})
-                        </div>
+                        <button
+                          onClick={() =>
+                            handleCopy(
+                              'market',
+                              {
+                                x: item.buyLocation.map_x,
+                                y: item.buyLocation.map_y
+                              },
+                              setCopiedBuy,
+                              index
+                            )
+                          }
+                          className="px-2 py-1 rounded-lg bg-blue-600 text-blue-100 hover:bg-blue-800 transition cursor-pointer mr-2"
+                        >
+                          {copiedBuy === index ? 'Copied! ✅' : 'Copy Buy 📍'}
+                        </button>
+                        <button
+                          onClick={() =>
+                            handleCopy(
+                              'buymarket',
+                              {
+                                x: item.sellLocation.map_x,
+                                y: item.sellLocation.map_y
+                              },
+                              setCopiedSell,
+                              index
+                            )
+                          }
+                          className="px-2 py-1 rounded-lg bg-yellow-600 text-yellow-100 hover:bg-yellow-800 transition cursor-pointer"
+                        >
+                          {copiedSell === index ? 'Copied! ✅' : 'Copy Sell 💰'}
+                        </button>
                       </div>
                     </div>
                   ))}
