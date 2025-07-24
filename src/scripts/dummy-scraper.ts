@@ -8,6 +8,7 @@ import { exportToFile } from '../helpers/export-to-file'
 
 const MAX_ITEMS_PER_PAGE = 30
 const BASE_URL = new URL('https://ragnatales.com.br/market')
+const FETCH_URL = new URL('https://api.ragnatales.com.br')
 const MERCHANT_BUFF_PERCENTAGE = 1.24
 
 export default async function scrape() {
@@ -60,23 +61,29 @@ async function scrapeCategory({ categoryName }: CategoryProps) {
     const result: Item[] = []
 
     for (let i = 1; i <= totalPages; i++) {
-      const pageUrl = new URL(
-        `market/${categoryName}?page=${i}&query=`,
-        BASE_URL
-      )
-      await page.goto(pageUrl.toString())
+      const filters = { query: '', etc: true }
+      const encodedFilters = encodeURIComponent(JSON.stringify(filters))
 
-      // Should probably check if we can do this in parallel (opening multiple pages) instead of scraping 200+ pages sequentially
-      const response = await page.waitForResponse(
-        (res) =>
-          res.url().includes('api.ragnatales.com.br/market') &&
-          res.status() === 200,
-        { timeout: 10000 } // in ms
+      // Working!
+      const fetchUrl = new URL(
+        `market/?page=${i}&rows_per_page=${MAX_ITEMS_PER_PAGE}&filters=${encodedFilters}`,
+        FETCH_URL
       )
 
-      const data = await response.json()
+      // Step 3: Run fetch inside the browser context instead of navigating
+      const fetchData = await page.evaluate(async (url) => {
+        console.log('Evaluating...')
 
-      const items: Item[] = data.rows
+        console.log('Fetch URL:', url.toString())
+
+        const data = await fetch(url)
+          .then((response) => response.json())
+          .catch((error) => console.error('Fetch error:', error))
+
+        return data
+      }, fetchUrl.toString())
+
+      const items: Item[] = fetchData.rows
 
       const dumbSells = items.filter(
         (item) => item.value_sell * MERCHANT_BUFF_PERCENTAGE > item.price
@@ -84,6 +91,8 @@ async function scrapeCategory({ categoryName }: CategoryProps) {
 
       result.push(...dumbSells)
     }
+
+    console.log('Finished scraping category:', categoryName)
 
     await browser.close()
 
@@ -114,7 +123,7 @@ async function scrapeCategory({ categoryName }: CategoryProps) {
     renameFile(filename)
     exportToFile(dumbSells, filename)
   } catch (error) {
-    console.error('Error during scraping:', error)
+    console.error('Error during scraping:', error, JSON.stringify(error))
   }
 }
 
