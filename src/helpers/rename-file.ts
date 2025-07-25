@@ -1,5 +1,6 @@
 import * as fs from 'node:fs'
 import path from 'node:path'
+import { Logger } from './logger'
 
 export function renameFile(targetSubstring: string) {
   const dir = './src/results'
@@ -7,7 +8,7 @@ export function renameFile(targetSubstring: string) {
 
   fs.readdir(dir, (err, files) => {
     if (err) {
-      return console.error('Error reading directory:', err)
+      return Logger.error(`Error reading directory: ${err}`)
     }
 
     files = files.filter((file) => !file.startsWith(OLD_FILE_PREFIX))
@@ -15,7 +16,7 @@ export function renameFile(targetSubstring: string) {
     const matchedFile = files.find((file) => file.includes(targetSubstring))
 
     if (!matchedFile) {
-      console.log(`No file found containing "${targetSubstring}"`)
+      Logger.log(`No file found containing "${targetSubstring}"`)
       return
     }
 
@@ -27,9 +28,9 @@ export function renameFile(targetSubstring: string) {
 
     fs.rename(oldPath, newPath, (err) => {
       if (err) {
-        return console.error('Error renaming file:', err)
+        return Logger.error(`Error renaming file: ${err}`)
       }
-      console.log(`Renamed "${matchedFile}" to "${newFileName}"`)
+      // Logger.log(`Renamed "${matchedFile}" to "${newFileName}"`)
     })
   })
 }

@@ -3,23 +3,41 @@ import puppeteer, { Browser } from 'puppeteer'
 import { Item } from '../entities/item'
 import { BuyOffer, ProcessedBuyOffer } from '../entities/buy-offer'
 
+import { Logger } from '../helpers/logger'
 import { renameFile } from '../helpers/rename-file'
 import { exportToFile } from '../helpers/export-to-file'
-import { stringToBase64 } from '../helpers/string-to-base64'
 
-const MAX_ITEMS_PER_PAGE = 30
-const BASE_URL = new URL('https://ragnatales.com.br/market')
-const BUYMARKET_URL = new URL('https://ragnatales.com.br/buymarket')
+import {
+  API_URL,
+  BASE_URL,
+  BUYMARKET_URL,
+  MAX_ITEMS_PER_PAGE
+} from '../helpers/constants'
+import { intervalToDuration } from 'date-fns'
 
 export default async function scrape() {
+  const startTime = Date.now()
+
   const browser = await puppeteer.launch({
     headless: false
   })
 
   try {
     const buyOffers = await scrapeBuyMarket(browser)
+    const groupedOffers = groupByItemName(buyOffers)
+    sortBuyOffersByPrice(groupedOffers)
+    Logger.log(`Total unique items: ${groupedOffers.size}`)
 
-    const highestUniqueOffers = getHighestItemPriceOffers(buyOffers)
+    const highestUniqueOffers: BuyOffer[] = []
+    for (const [_, offers] of groupedOffers.entries()) {
+      const highestOfferForItem = offers.pop()
+
+      if (!highestOfferForItem) {
+        continue
+      }
+
+      highestUniqueOffers.push(highestOfferForItem)
+    }
 
     const items = await scrapeItems(browser, highestUniqueOffers)
 
@@ -74,24 +92,42 @@ export default async function scrape() {
     renameFile('buymarket')
     exportToFile(processed, 'buymarket')
   } catch (error) {
-    console.error(error)
+    Logger.error(`Flow error: ${error}`)
   } finally {
+    Logger.log('Finished script. Cleaning up...')
     await browser.close()
   }
+
+  const endTime = Date.now()
+
+  const duration = intervalToDuration({ start: startTime, end: endTime })
+
+  Logger.log(`Buymarket scraping completed in ${duration.seconds} seconds`)
 }
-function getHighestItemPriceOffers(offers: BuyOffer[]): BuyOffer[] {
-  const grouped = new Map<string, BuyOffer>()
+
+function groupByItemName(offers: BuyOffer[]): Map<string, BuyOffer[]> {
+  const offerMap = new Map<string, BuyOffer[]>()
 
   for (const offer of offers) {
-    const name = offer.item.name
-    const existing = grouped.get(name)
+    const itemName = offer.item.name
 
-    if (!existing || offer.price > existing.price) {
-      grouped.set(name, offer)
+    const offersForItem = offerMap.get(itemName)
+
+    if (!offersForItem) {
+      offerMap.set(itemName, [offer])
+      continue
     }
+
+    offersForItem.push(offer)
   }
 
-  return Array.from(grouped.values())
+  return offerMap
+}
+
+function sortBuyOffersByPrice(offers: Map<string, BuyOffer[]>): void {
+  offers.forEach((buyoffers) => {
+    buyoffers.sort((a, b) => a.price - b.price)
+  })
 }
 
 async function scrapeItems(
@@ -99,41 +135,30 @@ async function scrapeItems(
   items: BuyOffer[]
 ): Promise<Item[]> {
   const page = await browser.newPage()
-  await page.setRequestInterception(true)
 
-  page.on('request', (request) => {
-    const url = new URL(request.url())
-    if (url.searchParams.has('rows_per_page')) {
-      url.searchParams.set('rows_per_page', String(MAX_ITEMS_PER_PAGE))
+  await page.goto(BASE_URL.toString())
 
-      request.continue({
-        url: url.toString()
-      })
-    } else {
-      request.continue()
-    }
-  })
+  Logger.log('Started item scraping...')
 
   const result: Item[] = []
 
+  const fetchUrl = new URL(`/market`, API_URL)
+  fetchUrl.searchParams.set('page', '1')
+  fetchUrl.searchParams.set('rows_per_page', String(MAX_ITEMS_PER_PAGE))
+
   for (const offer of items) {
-    const itemUrl = new URL(
-      `/market?query=${stringToBase64(offer.item.name.toLowerCase())}`,
-      BASE_URL
-    )
+    const filters = JSON.stringify({ query: offer.item.name })
+    fetchUrl.searchParams.set('filters', filters)
 
-    await page.goto(itemUrl.toString())
+    const data = await page.evaluate(async (url) => {
+      const data = await fetch(url)
+        .then((response) => response.json())
+        .catch((error) => console.error(`Error while fetching: ${error}`))
 
-    const response = await page.waitForResponse(
-      (res) =>
-        res.url().includes('api.ragnatales.com.br/market') &&
-        res.status() === 200,
-      { timeout: 10000 } // in ms
-    )
+      return data
+    }, fetchUrl.toString())
 
-    const data = await response.json()
     const items: Item[] = data.rows
-
     const profitableItems = items.filter((item) => item.price < offer.price)
 
     result.push(...profitableItems)
@@ -143,25 +168,10 @@ async function scrapeItems(
 }
 
 async function scrapeBuyMarket(browser: Browser): Promise<BuyOffer[]> {
+  Logger.log('Buymarket scraping initiated')
   const page = await browser.newPage()
 
-  const url = new URL(`buymarket/?page=1&type=all`, BUYMARKET_URL)
-  await page.setRequestInterception(true)
-
-  page.on('request', (request) => {
-    const url = new URL(request.url())
-    if (url.searchParams.has('rows_per_page')) {
-      url.searchParams.set('rows_per_page', String(MAX_ITEMS_PER_PAGE))
-
-      request.continue({
-        url: url.toString()
-      })
-    } else {
-      request.continue()
-    }
-  })
-
-  await page.goto(url.toString())
+  await page.goto(BUYMARKET_URL.toString())
 
   const response = await page.waitForResponse(
     (res) =>
@@ -171,26 +181,34 @@ async function scrapeBuyMarket(browser: Browser): Promise<BuyOffer[]> {
   )
 
   const data = await response.json()
-  const totalPages: number = data.total_pages
+  const totalPages = Math.ceil(data.total_count / MAX_ITEMS_PER_PAGE)
+  Logger.log(`Total pages to scrape: ${totalPages}`)
 
   const result: BuyOffer[] = []
 
+  const fetchUrl = new URL(`/market/buystore`, API_URL)
+  fetchUrl.searchParams.set('query', '')
+  fetchUrl.searchParams.set('type', 'all')
+  fetchUrl.searchParams.set('rows_per_page', String(MAX_ITEMS_PER_PAGE))
+
   for (let i = 1; i <= totalPages; i++) {
-    const pageUrl = new URL(`buymarket/?page=${i}&type=all`, BUYMARKET_URL)
-    await page.goto(pageUrl.toString())
+    Logger.log(`Scraping buymarket page ${i}`)
+    fetchUrl.searchParams.set('page', String(i))
 
-    const response = await page.waitForResponse(
-      (res) =>
-        res.url().includes('api.ragnatales.com.br/market') &&
-        res.status() === 200,
-      { timeout: 10000 } // in ms
-    )
+    const data = await page.evaluate(async (url) => {
+      const data = await fetch(url)
+        .then((response) => response.json())
+        .catch((error) => Logger.error(`Error while fetching: ${error}`))
 
-    const data = await response.json()
+      return data
+    }, fetchUrl.toString())
 
     result.push(...data.rows)
   }
 
+  Logger.log(`Total buy offers scraped: ${result.length}`)
+
+  Logger.log(`Finished scraping buymarket, exiting...`)
   await page.close()
 
   return result

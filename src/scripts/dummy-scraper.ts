@@ -1,21 +1,33 @@
 import puppeteer from 'puppeteer'
+import { intervalToDuration } from 'date-fns'
 
 import { Item } from '../entities/item'
 import { DumbSellItem } from '../entities/processed'
 
+import { Logger } from '../helpers/logger'
 import { renameFile } from '../helpers/rename-file'
 import { exportToFile } from '../helpers/export-to-file'
 
-const MAX_ITEMS_PER_PAGE = 30
-const BASE_URL = new URL('https://ragnatales.com.br/market')
-const FETCH_URL = new URL('https://api.ragnatales.com.br')
-const MERCHANT_BUFF_PERCENTAGE = 1.24
+import {
+  API_URL,
+  BASE_URL,
+  MAX_ITEMS_PER_PAGE,
+  MERCHANT_BUFF_PERCENTAGE
+} from '../helpers/constants'
 
 export default async function scrape() {
+  const startTime = new Date()
+
   await Promise.all([
     scrapeCategory({ categoryName: 'usable' }),
     scrapeCategory({ categoryName: 'etc' })
   ])
+
+  const endTime = new Date()
+
+  const duration = intervalToDuration({ start: startTime, end: endTime })
+
+  Logger.log(`Dummy scraping completed in ${duration.seconds} seconds`)
 }
 
 interface CategoryProps {
@@ -30,23 +42,10 @@ async function scrapeCategory({ categoryName }: CategoryProps) {
 
     const page = await browser.newPage()
 
-    const url = new URL(`market/${categoryName}?page=1&query=`, BASE_URL)
-    await page.setRequestInterception(true)
+    Logger.log(`Starting scraping category: '${categoryName}'`)
 
-    page.on('request', (request) => {
-      const url = new URL(request.url())
-      if (url.searchParams.has('rows_per_page')) {
-        url.searchParams.set('rows_per_page', String(MAX_ITEMS_PER_PAGE))
-
-        request.continue({
-          url: url.toString()
-        })
-      } else {
-        request.continue()
-      }
-    })
-
-    await page.goto(url.toString())
+    const marketPageUrl = new URL(`/market/${categoryName}`, BASE_URL)
+    await page.goto(marketPageUrl.toString())
 
     const response = await page.waitForResponse(
       (res) =>
@@ -56,29 +55,23 @@ async function scrapeCategory({ categoryName }: CategoryProps) {
     )
 
     const data = await response.json()
-    const totalPages: number = data.total_pages
+    const totalPages = Math.ceil(data.total_count / MAX_ITEMS_PER_PAGE)
 
     const result: Item[] = []
 
-    for (let i = 1; i <= totalPages; i++) {
-      const filters = { query: '', [categoryName]: true }
-      const encodedFilters = encodeURIComponent(JSON.stringify(filters))
+    const fetchUrl = new URL(`/market`, API_URL)
+    const filters = JSON.stringify({ query: '', [categoryName]: true })
+    fetchUrl.searchParams.set('filters', filters)
+    fetchUrl.searchParams.set('rows_per_page', String(MAX_ITEMS_PER_PAGE))
 
-      // Working!
-      const fetchUrl = new URL(
-        `market/?page=${i}&rows_per_page=${MAX_ITEMS_PER_PAGE}&filters=${encodedFilters}`,
-        FETCH_URL
-      )
+    for (let i = 1; i <= totalPages; i++) {
+      fetchUrl.searchParams.set('page', String(i))
 
       // Step 3: Run fetch inside the browser context instead of navigating
       const fetchData = await page.evaluate(async (url) => {
-        console.log('Evaluating...')
-
-        console.log('Fetch URL:', url.toString())
-
         const data = await fetch(url)
           .then((response) => response.json())
-          .catch((error) => console.error('Fetch error:', error))
+          .catch((error) => console.error(`Error while fetching: ${error}`))
 
         return data
       }, fetchUrl.toString())
@@ -92,7 +85,7 @@ async function scrapeCategory({ categoryName }: CategoryProps) {
       result.push(...dumbSells)
     }
 
-    console.log('Finished scraping category:', categoryName)
+    Logger.log(`Finished scraping category: '${categoryName}'`)
 
     await browser.close()
 
@@ -123,7 +116,7 @@ async function scrapeCategory({ categoryName }: CategoryProps) {
     renameFile(filename)
     exportToFile(dumbSells, filename)
   } catch (error) {
-    console.error('Error during scraping:', error, JSON.stringify(error))
+    Logger.error(`Flow error: ${error}`)
   }
 }
 
